@@ -1,0 +1,130 @@
+<html>
+<head>
+<script src="vue.js"></script>
+<script src="axios.min.js"></script>
+</head>
+<body>
+<div id="demo">
+	請選擇飲料:<select v-model="drink_id" @change="drink_change">
+	<option v-for="row in rows" v-bind:value="row.id">
+	    {{ row.name }}
+	  </option>
+	</select>
+	請選擇數量:<select v-model="count" @change="count_change">
+	<option value="1">1</option>
+	<option value="2">2</option>
+	<option value="3">3</option>
+	<option value="4">4</option>
+	<option value="5">5</option>
+	<option value="6">6</option>
+	</select>
+	<input type="button" @click="add_drink" value="加到購物車"/>
+	<span>{{item_message}}<span>
+	<div>
+		<div v-for="drink_item in drink_ary">{{drink_item.name}}{{drink_item.count}}杯:{{drink_item.price*drink_item.count}}元</div>
+	</div>
+	<div v-if="drink_ary.length>0">
+		總計:{{total_message}}
+	</div>
+	<hr/>
+	<div>
+		<table border="1">
+			<tr><td>ID</td><td>Name</td><td>X</td><td>Y</td></tr>
+			<tr v-for="(r,index) in rows">
+				<td>{{r.id}}</td><td>{{r.name}}</td><td>{{r.price}}</td><td>{{r.price2}}</td>
+			</tr>
+		</table>
+	</div>
+</div>
+
+<script>
+
+function compare( a, b ) {
+	if ( a.price < b.price ){
+		return -1;
+	}
+	if ( a.price > b.price ){
+		return 1;
+	}
+	return 0;
+}
+
+const demo = new Vue({
+    el: '#demo',
+    data: {
+    	drink_id:0,
+    	count:0,
+    	item_message:"",
+    	total_message:"",
+    	rows:[],
+    	drink_ary:[],
+    	totoal_drink_ary:[]
+    },
+    mounted: function () {
+	var config = {
+	  headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+	  responseType: 'json'
+	};
+	axios.post("http://twhmp.macronix.com/vue_demo/get_drink.php",[],config)
+	.then(function (response) {
+		demo.rows = response.data;
+		console.log(demo.rows);
+	})
+	.catch(function (error) {
+		console.log(error);
+		alert('發生錯誤:'+error.message);
+	});
+    },
+    methods:{
+    	drink_change(){
+    		var  row = this.rows[this.drink_id];
+    	},
+    	count_change(){
+    		var  row = this.rows[this.drink_id];
+    		this.item_message = row.name+this.count+"杯"+"共"+(row.price*this.count)+"元";
+    	},
+    	add_drink(){
+    		console.log("add");
+    		var  row = this.rows[this.drink_id];
+    		var drink_row = row;
+    		drink_row.count = this.count;
+    		console.log(drink_row);
+    		
+    		this.drink_ary.push(drink_row);
+    		console.log(this.drink_ary);
+    		this.item_message = "";
+    		this.count = 0;
+    		this.drink_id = "";
+    		var totol_count = 0;
+    		var totol_sum = 0;
+    		var discount = 0;
+    		this.drink_ary.sort( compare );
+    		var tmp_count = 0;
+    		var tmp_total = 0;
+    		for(var i in this.drink_ary){
+    			var drink_item = this.drink_ary[i];
+    			for (let j = 0; j < parseInt( drink_item.count); j++) {
+    				tmp_count++;
+    				tmp_total += parseInt(drink_item.price);
+    				if(tmp_count/10 > 0 && tmp_count%10==0){
+    					discount = tmp_total/tmp_count;
+    				}
+    			}
+    		}
+    		console.log(discount);
+    		discount = parseInt(discount/5)*5;
+    		for(var i in this.drink_ary){
+    			var drink_item = this.drink_ary[i];
+    			totol_count+=parseInt(drink_item.count);
+    			totol_sum+=drink_item.count*drink_item.price;
+    			this.total_message = "共"+totol_count+"杯, "+totol_sum+"元";
+    			if(discount > 0){
+    				this.total_message += ",折價"+discount+"元, 折價後"+(totol_sum-discount)+"元";
+    			}
+    		}
+    	}
+    }
+})
+</script>
+</body>
+</html>
